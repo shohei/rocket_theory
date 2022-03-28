@@ -35,17 +35,14 @@ l2 = xnext(6);
 l3 = xnext(7);
 l4 = xnext(8);
 aTf = C/(tau_m-t(end));
-r = sqrt(x^2+y^2);
+r = sqrt(x^2+y^2)
 E1 = r-rf;
 E2 = sqrt(vx^2+vy^2) - vf;
 E3 = x/r*vx+y/r*vy - vrf;
 E4 = l1*y - l2*x;
-cos_th = l3/sqrt(l3^2+l4^2);
-sin_th = l4/sqrt(l3^2+l4^2);
-E5 = 1+l1*vx+l2*vy+l3*(aTf*cos_th-mu/r^3*x)+l4*(aTf*sin_th-mu/r^3*y);
-
-
-
+cos_th = ll3^2+l4^2;
+sin_th = 
+E5 = 1+l1*vx+l2*vy+l3(aTf*)
 
 function dx = adjoint_ode(t,xprev)
 global C; global tau_m; global mu; 
