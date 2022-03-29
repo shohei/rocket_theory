@@ -18,18 +18,25 @@ big;
 
 figure();
 hold on;
-a0_g = linspace(1,3.5,30);
-Lambdas = [2 3 4]; %質量比の逆数
+a0_g = linspace(1,3.5,50);
+Lambdas = [2 2.5 3 3.5 4]; %質量比の逆数
 
+y_pks = [];
+a0_g_peaks = [];
 for idx=1:length(Lambdas)
     Lambda = Lambdas(idx);
-    y_c2_a0 = 1+...
+    y_g_Isp2 = 1./a0_g.*(1+...
                 -1/Lambda*(1+log(Lambda))...
-                -0.5*(1./a0_g)*(1-1./Lambda).^2;
-    plot(a0_g, y_c2_a0);
+                -0.5*(1./a0_g)*(1-1./Lambda).^2);   
+    [y_pk,loc] = findpeaks(y_g_Isp2);
+    a0_g_peak = a0_g(loc);
+    y_pks(end+1) = y_pk;
+    a0_g_peaks(end+1) = a0_g_peak;
+    plot(a0_g, y_g_Isp2);
 end
+plot(a0_g_peaks, y_pks, 'xk');
 legend(arrayfun(@(x) sprintf('Lambda=%.1f',x), Lambdas,UniformOutput=false));
-title('垂直に上昇飛行するロケットの到達高度');
+title('垂直に上昇飛行するロケットの無次元到達高度');
 xlabel('発射時の加速度倍数G=a0/g0');
-ylabel('燃焼終了時の無次元高度 y/(c^2*a0)');
+ylabel('$y/g I_{sp}^2$','Interpreter','latex');
 big;
