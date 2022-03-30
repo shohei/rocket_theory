@@ -34,7 +34,7 @@ l1_final = xnext(5);
 l2_final = xnext(6);
 l3_final = xnext(7);
 l4_final = xnext(8);
-aTf = C/(tau_m-t(end));
+aT_final = C/(tau_m-t(end));
 r_final = sqrt(x_final^2+y_final^2);
 E1 = r_final-rf;
 E2 = sqrt(vx_final^2+vy_final^2) - vf;
@@ -44,38 +44,70 @@ cos_th_final = l3_final/sqrt(l3_final^2+l4_final^2);
 sin_th_final = l4_final/sqrt(l3_final^2+l4_final^2);
 E5 = 1+l1_final*vx_final+...
        l2_final*vy_final+...n
-       l3_final*(aTf*cos_th_final-mu/r_final^3*x_final)+...
-       l4_final*(aTf*sin_th_final-mu/r_final^3*y_final);
+       l3_final*(aT_final*cos_th_final-mu/r_final^3*x_final)+...
+       l4_final*(aT_final*sin_th_final-mu/r_final^3*y_final);
 % if max(E1,E2,E3,E4,E5) < 1e-2
 %   break;
 % end
 
-syms x y vx vy l1 l2 l3 l4 me aT;
+syms x y vx vy l1 l2 l3 l4 aT;
 H = 1+...
     l1*vx+...
     l2*vy+...
-    l3*(aT*cos(atan2(y,x))-me/sqrt(x^2+y^2)^3*x)+...
-    l4*(aT*sin(atan2(y,x))-me/sqrt(x^2+y^2)^3*y);
+    l3*(aT*cos(atan2(y,x))-mu/sqrt(x^2+y^2)^3*x)+...
+    l4*(aT*sin(atan2(y,x))-mu/sqrt(x^2+y^2)^3*y);
 f1 = vx;
 f2 = vy;
-f3 = l3*(aT*cos(atan2(y,x))-me/sqrt(x^2+y^2)^3*x);
-f4 = l4*(aT*sin(atan2(y,x))-me/sqrt(x^2+y^2)^3*y);
-A1 = diff(f1, x);
-B1 = 0;
-C1 = diff(diff(H, x), x);
-A2 = diff(f2, y);
-B2 = 0;
-C2 = diff(diff(H, y), y);
-A3 = diff(f3, vx);
-B3 = 0;
-C3 = diff(diff(H, vx), vx);
-A4 = diff(f4, vy);
-B4 = 0;
-C4 = diff(diff(H, vy), vy);
+f3 = l3*(aT*cos(atan2(y,x))-mu/sqrt(x^2+y^2)^3*x);
+f4 = l4*(aT*sin(atan2(y,x))-mu/sqrt(x^2+y^2)^3*y);
+df1_dx = diff(f1,x);
+df1_dy = diff(f1,y);
+df1_dvx = diff(f1,vx);
+df1_dvy = diff(f1,vy);
+df2_dx = diff(f2,x);
+df2_dy = diff(f2,y);
+df2_dvx = diff(f2,vx);
+df2_dvy = diff(f2,vy);
+df3_dx = diff(f3,x);
+df3_dy = diff(f3,y);
+df3_dvx = diff(f3,vx);
+df3_dvy = diff(f3,vy);
+df4_dx = diff(f4,x);
+df4_dy = diff(f4,y);
+df4_dvx = diff(f4,vx);
+df4_dvy = diff(f4,vy);
+df_dx = [df1_dx df1_dy df1_dvx df1_dvy;
+         df2_dx df2_dy df1_dvx df2_dvy;
+         df3_dx df3_dy df3_dvx df3_dvy;
+         df4_dx df4_dy df4_dvx df4_dvy];
+d2H_dxdx = diff(diff(H,x),x);
+d2H_dxdy = diff(diff(H,x),y);
+d2H_dxdvx = diff(diff(H,x),vx);
+d2H_dxdvy = diff(diff(H,x),vy);
+d2H_dydx = diff(diff(H,y),x);
+d2H_dydy = diff(diff(H,y),y);
+d2H_dydvx = diff(diff(H,y),vx);
+d2H_dydvy = diff(diff(H,y),vy);
+d2H_dvxdx = diff(diff(H,vx),x);
+d2H_dvxdy = diff(diff(H,vx),y);
+d2H_dvxdvx = diff(diff(H,vx),vx);
+d2H_dvxdvy = diff(diff(H,vx),vy);
+d2H_dvydx = diff(diff(H,vy),x);
+d2H_dvydy = diff(diff(H,vy),y);
+d2H_dvydvx = diff(diff(H,vy),vx);
+d2H_dvydvy = diff(diff(H,vy),vy);
 
-
-
-
+d2H_dx2 = [d2H_dxdx d2H_dxdy d2H_dxdvx d2H_dxdvy;
+           d2H_dydx d2H_dydy d2H_dydvx d2H_dydvy;
+           d2H_dvxdx d2H_dvxdy d2H_dvxdvx d2H_dvxdvy;
+           d2H_dvydx d2H_dvydy d2H_dvydvx d2H_dvydvy];
+At = subs(df_dx,[x y vx vy l1 l2 l3 l4 aT],...
+       [x_final,y_final,vx_final,vy_final,...
+       l1_final,l2_final,l3_final,l4_final,aT_final]);
+Bt = 0;
+Ct = subs(d2H_dx2,[x y vx vy l1 l2 l3 l4 aT],...
+       [x_final,y_final,vx_final,vy_final,...
+       l1_final,l2_final,l3_final,l4_final,aT_final]);
 
 function dx = adjoint_ode(t,xprev)
 global C; global tau_m; global mu; 

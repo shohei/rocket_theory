@@ -60,12 +60,26 @@ f1 = vx;
 f2 = vy;
 f3 = l3*(aT*cos(atan2(y,x))-me/sqrt(x^2+y^2)^3*x);
 f4 = l4*(aT*sin(atan2(y,x))-me/sqrt(x^2+y^2)^3*y);
-A1 = diff(f1, x);
-B1 = 0;
-C1 = diff(diff(H, x), x);
-A2 = diff(f2, y);
-B2 = 0;
-C2 = dif
+df1_dx = diff(f1,x);
+df1_dy = diff(f1,y);
+df1_dvx = diff(f1,vx);
+df1_dvy = diff(f1,vy);
+df2_dx = diff(f2,x);
+df2_dy = diff(f2,y);
+df2_dvx = diff(f2,vx);
+df2_dvy = diff(f2,vy);
+df3_dx = diff(f3,x);
+df3_dy = diff(f3,y);
+df3_dvx = diff(f3,vx);
+df3_dvy = diff(f3,vy);
+df4_dx = diff(f4,x);
+df4_dy = diff(f4,y);
+df4_dvx = diff(f4,vx);
+df4_dvy = diff(f4,vy);
+df_dx = [df1_dx df1_dx df1_dvx df1_dvy;
+         df2_dx df2_dx df1_dvx df1_dvy;
+         df1_dx df1_dx df1_dvx df1_dvy;
+         df1_dx df1_dx df1_dvx df1_dvy];
 
 
 
