@@ -26,14 +26,22 @@ l20= 1; %todo
 l30 = 1; %todo
 l40 = 1; %todo
 [t,xnext] = ode23s(@adjoint_ode, tspan, [x0,y0,vx0,vy0,l10,l20,l30,l40]);
-x_final = xnext(1);
-y_final = xnext(2);
-vx_final = xnext(3);
-vy_final = xnext(4);
-l1_final = xnext(5);
-l2_final = xnext(6);
-l3_final = xnext(7);
-l4_final = xnext(8);
+x_ = xnext(:,1);
+y_ = xnext(:,2);
+vx_ = xnext(:,3);
+vy_ = xnext(:,4);
+l1_ = xnext(:,5);
+l2_ = xnext(:,6);
+l3_ = xnext(:,7);
+l4_ = xnext(:,8);
+x_final = x_(end);
+y_final = y_(end);
+vx_final = vx_(end);
+vy_final = vy_(end);
+l1_final = l1_(end);
+l2_final = l2_(end);
+l3_final = l3_(end);
+l4_final = l4_(end);
 aT_final = C/(tau_m-t(end));
 r_final = sqrt(x_final^2+y_final^2);
 E1 = r_final-rf;
@@ -51,15 +59,11 @@ E5 = 1+l1_final*vx_final+...
 % end
 
 syms x y vx vy l1 l2 l3 l4 aT;
-H = 1+...
-    l1*vx+...
-    l2*vy+...
-    l3*(aT*cos(atan2(y,x))-mu/sqrt(x^2+y^2)^3*x)+...
-    l4*(aT*sin(atan2(y,x))-mu/sqrt(x^2+y^2)^3*y);
 f1 = vx;
 f2 = vy;
-f3 = l3*(aT*cos(atan2(y,x))-mu/sqrt(x^2+y^2)^3*x);
-f4 = l4*(aT*sin(atan2(y,x))-mu/sqrt(x^2+y^2)^3*y);
+f3 = aT*sqrt(vx^2/(vx^2+vy^2))-mu/sqrt(x^2+y^2)^3*x;
+f4 = aT*sqrt(vy^2/(vx^2+vy^2))-mu/sqrt(x^2+y^2)^3*y;
+H = 1 + l1*f1 + l2*f2 + l3*f3 + l4*f4;
 df1_dx = diff(f1,x);
 df1_dy = diff(f1,y);
 df1_dvx = diff(f1,vx);
@@ -101,13 +105,16 @@ d2H_dx2 = [d2H_dxdx d2H_dxdy d2H_dxdvx d2H_dxdvy;
            d2H_dydx d2H_dydy d2H_dydvx d2H_dydvy;
            d2H_dvxdx d2H_dvxdy d2H_dvxdvx d2H_dvxdvy;
            d2H_dvydx d2H_dvydy d2H_dvydvx d2H_dvydvy];
-At = subs(df_dx,[x y vx vy l1 l2 l3 l4 aT],...
+At = eval(subs(df_dx,[x y vx vy l1 l2 l3 l4 aT],...
        [x_final,y_final,vx_final,vy_final,...
-       l1_final,l2_final,l3_final,l4_final,aT_final]);
+       l1_final,l2_final,l3_final,l4_final,aT_final]));
 Bt = 0;
-Ct = subs(d2H_dx2,[x y vx vy l1 l2 l3 l4 aT],...
+Ct = eval(subs(d2H_dx2,[x y vx vy l1 l2 l3 l4 aT],...
        [x_final,y_final,vx_final,vy_final,...
-       l1_final,l2_final,l3_final,l4_final,aT_final]);
+       l1_final,l2_final,l3_final,l4_final,aT_final]));
+
+
+
 
 function dx = adjoint_ode(t,xprev)
 global C; global tau_m; global mu; 
@@ -132,9 +139,4 @@ dx = [vx;
     -l1;
     -l2];
 end
-
-
-
-
-
 
