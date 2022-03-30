@@ -113,19 +113,40 @@ Ct = eval(subs(d2H_dx2,[x y vx vy l1 l2 l3 l4 aT],...
     [x_final,y_final,vx_final,vy_final,...
     l1_final,l2_final,l3_final,l4_final,aT_final]));
 r = sqrt(x^2+y^2);
-r_tf = subs(r,[x,y],[x_final,y_final]);
+% r_tf = subs(r,[x,y],[x_final,y_final]);
 cos_theta = vx/sqrt(vx^2+vy^2);
 sin_theta = vy/sqrt(vx^2+vy^2);
 dtheta_dt = cos_theta^2*(-vy/vx^2*(aT*cos_theta-mu/r^3*x)+...
-                           1/vx*(aT*sin_theta-mu/r^3*y));
-theta_dot_tf = subs(dtheta_dt, [x,y,vx,vy,aT], ...
-                    [x_final,y_final,vx_final,vy_final,aT_final]);
+    1/vx*(aT*sin_theta-mu/r^3*y));
+% theta_dot_tf = subs(dtheta_dt, [x,y,vx,vy,aT], ...
+%                     [x_final,y_final,vx_final,vy_final,aT_final]);
 dr_dt = x/sqrt(x^2+y^2)*vx + y/sqrt(x^2+y^2)*vy;
-rdot_tf = subs(dr_dt,[x,y,vx,vy],[x_final,y_final,vx_final,vy_final]);
-phi1 = r_tf - rf;
-phi2 = r_tf*theta_dot_tf - vf;
-phi3 = rdot_tf - vrf;
+% rdot_tf = subs(dr_dt,[x,y,vx,vy],[x_final,y_final,vx_final,vy_final]);
+phi1 = r - rf;
+phi2 = r*dtheta_dt - vf;
+phi3 = dr_dt - vrf;
 phi = phi1+phi2+phi3; % Terminal cost: scalar function
+d2phi_dxdx = diff(diff(phi,x),x);
+d2phi_dxdy = diff(diff(phi,x),y);
+d2phi_dxdvx = diff(diff(phi,x),vx);
+d2phi_dxdvy = diff(diff(phi,x),vy);
+d2phi_dydx = diff(diff(phi,y),x);
+d2phi_dydy = diff(diff(phi,y),y);
+d2phi_dydvx = diff(diff(phi,y),vx);
+d2phi_dydvy = diff(diff(phi,y),vy);
+d2phi_dvxdx = diff(diff(phi,vx),x);
+d2phi_dvxdy = diff(diff(phi,vx),y);
+d2phi_dvxdvx = diff(diff(phi,vx),vx);
+d2phi_dvxdvy = diff(diff(phi,vx),vy);
+d2phi_dvydx = diff(diff(phi,vy),x);
+d2phi_dvydy = diff(diff(phi,vy),y);
+d2phi_dvydvx = diff(diff(phi,vy),vx);
+d2phi_dvydvy = diff(diff(phi,vy),vy);
+S = [d2phi_dxdx d2phi_dxdy d2phi_dxdvx d2phi_dxdvy;
+     d2phi_dydx d2phi_dydy d2phi_dydvx d2phi_dydvy;
+     d2phi_dvxdx d2phi_dvxdy d2phi_dvxdvx d2phi_dvxdvy;
+     d2phi_dvydx d2phi_dvydy d2phi_dvydvx d2phi_dvydvy];
+S_final = eval(subs(S,[x,y,vx,vy,aT],[x_final,y_final,vx_final,vy_final,aT_final]));
 
 [t,S] = ode23s(@riccati_ode1,flip(tspan),S_final);
 
