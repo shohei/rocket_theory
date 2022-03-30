@@ -1,6 +1,6 @@
 clear; close all; clc;
 
-global C; global tau_m; global mu; 
+global C; global tau_m; global mu;
 
 rf = 6491.14e3; %m
 vf = 7832; %m/s
@@ -51,9 +51,9 @@ E4 = l1_final*y_final - l2_final*x_final;
 cos_th_final = l3_final/sqrt(l3_final^2+l4_final^2);
 sin_th_final = l4_final/sqrt(l3_final^2+l4_final^2);
 E5 = 1+l1_final*vx_final+...
-       l2_final*vy_final+...n
-       l3_final*(aT_final*cos_th_final-mu/r_final^3*x_final)+...
-       l4_final*(aT_final*sin_th_final-mu/r_final^3*y_final);
+    l2_final*vy_final+...n
+    l3_final*(aT_final*cos_th_final-mu/r_final^3*x_final)+...
+    l4_final*(aT_final*sin_th_final-mu/r_final^3*y_final);
 % if max(E1,E2,E3,E4,E5) < 1e-2
 %   break;
 % end
@@ -81,9 +81,9 @@ df4_dy = diff(f4,y);
 df4_dvx = diff(f4,vx);
 df4_dvy = diff(f4,vy);
 df_dx = [df1_dx df1_dy df1_dvx df1_dvy;
-         df2_dx df2_dy df1_dvx df2_dvy;
-         df3_dx df3_dy df3_dvx df3_dvy;
-         df4_dx df4_dy df4_dvx df4_dvy];
+    df2_dx df2_dy df1_dvx df2_dvy;
+    df3_dx df3_dy df3_dvx df3_dvy;
+    df4_dx df4_dy df4_dvx df4_dvy];
 d2H_dxdx = diff(diff(H,x),x);
 d2H_dxdy = diff(diff(H,x),y);
 d2H_dxdvx = diff(diff(H,x),vx);
@@ -102,22 +102,30 @@ d2H_dvydvx = diff(diff(H,vy),vx);
 d2H_dvydvy = diff(diff(H,vy),vy);
 
 d2H_dx2 = [d2H_dxdx d2H_dxdy d2H_dxdvx d2H_dxdvy;
-           d2H_dydx d2H_dydy d2H_dydvx d2H_dydvy;
-           d2H_dvxdx d2H_dvxdy d2H_dvxdvx d2H_dvxdvy;
-           d2H_dvydx d2H_dvydy d2H_dvydvx d2H_dvydvy];
+    d2H_dydx d2H_dydy d2H_dydvx d2H_dydvy;
+    d2H_dvxdx d2H_dvxdy d2H_dvxdvx d2H_dvxdvy;
+    d2H_dvydx d2H_dvydy d2H_dvydvx d2H_dvydvy];
 At = eval(subs(df_dx,[x y vx vy l1 l2 l3 l4 aT],...
-       [x_final,y_final,vx_final,vy_final,...
-       l1_final,l2_final,l3_final,l4_final,aT_final]));
+    [x_final,y_final,vx_final,vy_final,...
+    l1_final,l2_final,l3_final,l4_final,aT_final]));
 Bt = 0;
 Ct = eval(subs(d2H_dx2,[x y vx vy l1 l2 l3 l4 aT],...
-       [x_final,y_final,vx_final,vy_final,...
-       l1_final,l2_final,l3_final,l4_final,aT_final]));
+    [x_final,y_final,vx_final,vy_final,...
+    l1_final,l2_final,l3_final,l4_final,aT_final]));
 
 
+[t,S] = ode23s(@riccati_ode1,flip(tspan),S_final);
+
+function dS = riccati_ode1(t,S)
+At = A(t);
+Bt = B(t);
+Ct = C(t);
+dS = -At^T*S-S*At-S*Bt*S+Ct;
+end
 
 
 function dx = adjoint_ode(t,xprev)
-global C; global tau_m; global mu; 
+global C; global tau_m; global mu;
 x = xprev(1);
 y = xprev(2);
 vx = xprev(3);
