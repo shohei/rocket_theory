@@ -124,6 +124,8 @@ dS = -At^T*S-S*At-S*Bt*S+Ct;
 end
 
 
+
+
 function dx = adjoint_ode(t,xprev)
 global C; global tau_m; global mu;
 x = xprev(1);
