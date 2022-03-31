@@ -1,14 +1,13 @@
 clear; close all; clc;
-global count;
-count=0;
 
+% 計算条件の定義
 global C; global tau_m; global mu;
 
 rf = 6491.14e3; %m
 vf = 7832; %m/s
 vrf = 0; %m/s
 
-vy0 = 0; %m/s 垂直方向初速
+vy0 = 1e-3; %m/s 垂直方向初速. ゼロにするとエラーになるので微小の値を入れた.
 vx0 = 465.1; %m/s 水平方向初速. 赤道上、真東への打ち上げ
 re = 6378.142e3; %m
 x0 = 0;
@@ -22,12 +21,26 @@ aT_0 = 13.8; %m2/s. 1.4G
 mu = 3.986e14; %m3/s2
 
 tf = 274.1; %[s] エンジン燃焼時間
-tspan = linspace(0,tf,10000);
-l10 = 1; %todo
-l20= 1; %todo
-l30 = 1; %todo
-l40 = 1; %todo
-[t_,xnext] = ode23s(@adjoint_ode, tspan, [x0,y0,vx0,vy0,l10,l20,l30,l40]);
+div_time = 1000; %時間刻み
+tspan = linspace(0,tf,div_time);
+
+% シューティング法（Backward sweep）による繰り返し計算
+% λの初期値変数の初期値を仮定
+l1_0 = 1; l2_0 = 1; l3_0 = 1; l4_0 = 1;
+% λの初期値変数の定義
+global l1i; global l2i; global l3i; global l4i; 
+% λの修正量δλの定義
+global dl1; global dl2; global dl3; global dl4; 
+dl1 = 0; dl2 = 0; dl3 = 0; dl4 = 0;
+
+while true %無限ループ
+
+% λの初期値を仮定
+l1i = l1_0 + dl1; 
+l2i = l2_0 + dl2; 
+l3i = l3_0 + dl3; 
+l4i = l4_0 + dl4; 
+[t_,xnext] = ode23s(@adjoint_ode, tspan, [x0,y0,vx0,vy0,l1i,l2i,l3i,l4i]);
 x_ = xnext(:,1);
 y_ = xnext(:,2);
 vx_ = xnext(:,3);
@@ -47,19 +60,6 @@ l3_final = l3_(end);
 l4_final = l4_(end);
 aT_final = C/(tau_m-t_(end));
 r_final = sqrt(x_final^2+y_final^2);
-E1 = r_final-rf;
-E2 = sqrt(vx_final^2+vy_final^2) - vf;
-E3 = x_final/r_final*vx_final+y_final/r_final*vy_final - vrf;
-E4 = l1_final*y_final - l2_final*x_final;
-cos_th_final = l3_final/sqrt(l3_final^2+l4_final^2);
-sin_th_final = l4_final/sqrt(l3_final^2+l4_final^2);
-E5 = 1+l1_final*vx_final+...
-    l2_final*vy_final+...n
-    l3_final*(aT_final*cos_th_final-mu/r_final^3*x_final)+...
-    l4_final*(aT_final*sin_th_final-mu/r_final^3*y_final);
-% if max(E1,E2,E3,E4,E5) < 1e-2
-%   break;
-% end
 
 syms x y vx vy l1 l2 l3 l4 aT;
 f1 = vx;
@@ -67,6 +67,7 @@ f2 = vy;
 f3 = aT*sqrt(vx^2/(vx^2+vy^2))-mu/sqrt(x^2+y^2)^3*x;
 f4 = aT*sqrt(vy^2/(vx^2+vy^2))-mu/sqrt(x^2+y^2)^3*y;
 H = 1 + l1*f1 + l2*f2 + l3*f3 + l4*f4;
+% 上程方程式fのヤコビ行列の計算
 df1_dx = diff(f1,x);
 df1_dy = diff(f1,y);
 df1_dvx = diff(f1,vx);
@@ -87,6 +88,7 @@ df_dx = [df1_dx df1_dy df1_dvx df1_dvy;
     df2_dx df2_dy df1_dvx df2_dvy;
     df3_dx df3_dy df3_dvx df3_dvy;
     df4_dx df4_dy df4_dvx df4_dvy];
+% Hのヘッセ行列の計算
 d2H_dxdx = diff(diff(H,x),x);
 d2H_dxdy = diff(diff(H,x),y);
 d2H_dxdvx = diff(diff(H,x),vx);
@@ -108,10 +110,11 @@ d2H_dx2 = [d2H_dxdx d2H_dxdy d2H_dxdvx d2H_dxdvy;
     d2H_dydx d2H_dydy d2H_dydvx d2H_dydvy;
     d2H_dvxdx d2H_dvxdy d2H_dvxdvx d2H_dvxdvy;
     d2H_dvydx d2H_dvydy d2H_dvydvx d2H_dvydvy];
-At = df_dx;
-Bt = 0;
-Ct = d2H_dx2;
-    r = sqrt(x^2+y^2);
+A_sym = df_dx;
+B_sym = 0;
+C_sym = d2H_dx2;
+
+r = sqrt(x^2+y^2);
 cos_theta = vx/sqrt(vx^2+vy^2);
 sin_theta = vy/sqrt(vx^2+vy^2);
 dtheta_dt = cos_theta^2*(-vy/vx^2*(aT*cos_theta-mu/r^3*x)+...
@@ -142,27 +145,85 @@ S = [d2phi_dxdx d2phi_dxdy d2phi_dxdvx d2phi_dxdvy;
     d2phi_dvxdx d2phi_dvxdy d2phi_dvxdvx d2phi_dvxdvy;
     d2phi_dvydx d2phi_dvydy d2phi_dvydvx d2phi_dvydvy];
 S_final = eval(subs(S,[x,y,vx,vy,aT],[x_final,y_final,vx_final,vy_final,aT_final]));
-S_final = reshape(S_final, [16,1]);
-[t,Snext] = ode23s(@(t,Sprev) riccati_ode1(...
-    t,Sprev,At,Bt,Ct,t_,x_,y_,vx_,vy_,l1_,l2_,l3_,l4_,aT_),...
-    flip(tspan),S_final);
+
+% ターミナルコストΦ(終端条件)のグラディエントの計算
+dphi_dx = [diff(phi,x); diff(phi,y); diff(phi,vx); diff(phi,vy)];
+dphi_dx_transpose_final = eval(subs((dphi_dx)',[x,y,vx,vy,aT],...
+                         [x_final,y_final,vx_final,vy_final,aT_final]));
+
+% エラーの計算
+E = [l1_final;l2_final;l3_final;l4_final] -...
+     dphi_dx_transpose_final * [x_final;y_final;vx_final;vy_final];
+E
+if max(E) < 1e-2
+  break;
+end
+
+%初回に一度make_ABCを実行してAt,Bt,Ctを作成しておく.
+%  [At,Bt,Ct] = make_ABC(A_sym,B_sym,C_sym,t_,x_,y_,vx_,vy_,aT_,l1_,l2_,l3_,l4_);
+%  save('ABC.mat','At','Bt','Ct');
+
+%2回目以降はAt,Bt,Ctを呼び出して使う
+load('ABC','At','Bt','Ct');
+[t,Sprev] = ode23s(@(t,Snext) riccati_ode1(t,Snext,At,Bt,Ct,t_),flip(tspan),S_final);
+
+c_final = -E;
+[t,cprev] = ode23s(@(t,cnext) riccati_ode2(t,cnext,At,Bt,Ct,Sprev,t_),flip(tspan),c_final);
+% tは時系列的に逆順に入っているので、cprevの最後の要素がc(0)になる。
+c_zero = cprev(end,:);
+dl1 = c_zero(1);
+dl2 = c_zero(2);
+dl3 = c_zero(3);
+dl4 = c_zero(4);
+
+end
 
 
-function dS = riccati_ode1(t,S,At,Bt,Ct,t_,x_,y_,vx_,vy_,l1_,l2_,l3_,l4_,aT_)
 
-t_idx = find(t_==t);
-x_t = x_(t_idx); y_t = y_(t_idx); vx_t = vx_(t_idx); vy_t = vy_(t_idx);
-l1_t = l1_(t_idx); l2_t = l2_(t_idx); l3_t = l3_(t_idx); l4_t = l4_(t_idx);
-aT_t = aT_(t_idx);
+function dc = riccati_ode2(t,c,At,Bt,Ct,St,t_all)
+N = length(t_all);
+St = reshape(St, [4,4,N]);
+[val,t_idx]=min(abs(t_all-t));
+A_t = At(:,:,t_idx);
+B_t = Bt(:,:,t_idx);
+C_t = Ct(:,:,t_idx);
+S_t = St(:,:,t_idx);
+dc = (S_t*B_t-A_t')*c;
+end
+
+
+function [At, Bt, Ct] = make_ABC(A_sym,B_sym,C_sym,t_all,x_,y_,vx_,vy_,aT_,l1_,l2_,l3_,l4_)
+tic;
 syms x y vx vy aT l1 l2 l3 l4;
-A_t = eval(subs(At,[x y vx vy aT],[x_t,y_t,vx_t,vy_t,aT_t]));
-B_t = Bt;
-C_t = eval(subs(Ct,[x y vx vy l1 l2 l3 l4 aT],...
-    [x_t,y_t,vx_t,vy_t,l1_t,l2_t,l3_t,l4_t,aT_t]));
-S = reshape(S,[4,4]);
-dS = -A_t'*S-S*A_t-S*B_t*S+C_t;
-dS = reshape(dS,[16,1]);
+N = length(t_all);
+At = zeros(4,4,N);
+Bt = zeros(4,4,N);
+Ct = zeros(4,4,N);
+for t_idx=1:length(t_all)
+    t_idx
+    x_t = x_(t_idx); y_t = y_(t_idx); vx_t = vx_(t_idx); 
+    vy_t = vy_(t_idx); aT_t = aT_(t_idx); 
+    l1_t = l1_(t_idx); l2_t = l2_(t_idx); l3_t = l3_(t_idx); 
+    l4_t = l4_(t_idx);
+    A = eval(subs(A_sym,[x y vx vy aT],[x_t,y_t,vx_t,vy_t,aT_t]));
+    B = B_sym;
+    C = eval(subs(C_sym,[x y vx vy l1 l2 l3 l4 aT],...
+        [x_t,y_t,vx_t,vy_t,l1_t,l2_t,l3_t,l4_t,aT_t]));
+    At(:,:,t_idx) = A;
+    Bt(:,:,t_idx) = B;
+    Ct(:,:,t_idx) = C;
+end
+toc;
+end
 
+function dS = riccati_ode1(t,S,At,Bt,Ct,t_all)
+S = reshape(S,[4,4]);
+[val,t_idx]=min(abs(t_all-t));
+A_t = At(:,:,t_idx);
+B_t = Bt(:,:,t_idx);
+C_t = Ct(:,:,t_idx);
+dS = -A_t'*S-S*A_t-S*B_t*S+C_t;
+dS = dS(:);
 end
 
 
