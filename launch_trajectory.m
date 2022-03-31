@@ -31,16 +31,18 @@ l1_0 = 1; l2_0 = 1; l3_0 = 1; l4_0 = 1;
 global l1i; global l2i; global l3i; global l4i; 
 l1i = l1_0; l2i = l2_0; l3i = l3_0; l4i = l4_0;
 % λの修正量δλの定義
-global dl1; global dl2; global dl3; global dl4; 
+global dl1; global dl2; global dl3; global dl4;
 dl1 = 0; dl2 = 0; dl3 = 0; dl4 = 0;
 
-while true %無限ループ
 
+iter = 0;
+%% メイン計算部
+while true %無限ループ
 % λの初期値を仮定
 l1i = l1i + dl1; 
 l2i = l2i + dl2; 
 l3i = l3i + dl3; 
-l4i = l4i + dl4; 
+l4i = l4i + dl4;
 [t_,xnext] = ode23s(@adjoint_ode, tspan, [x0,y0,vx0,vy0,l1i,l2i,l3i,l4i]);
 x_ = xnext(:,1);
 y_ = xnext(:,2);
@@ -68,7 +70,7 @@ f2 = vy;
 f3 = aT*sqrt(vx^2/(vx^2+vy^2))-mu/sqrt(x^2+y^2)^3*x;
 f4 = aT*sqrt(vy^2/(vx^2+vy^2))-mu/sqrt(x^2+y^2)^3*y;
 H = 1 + l1*f1 + l2*f2 + l3*f3 + l4*f4;
-% 上程方程式fのヤコビ行列の計算
+% 状態方程式fのヤコビ行列の計算
 df1_dx = diff(f1,x);
 df1_dy = diff(f1,y);
 df1_dvx = diff(f1,vx);
@@ -155,7 +157,7 @@ dphi_dx_transpose_final = eval(subs((dphi_dx)',[x,y,vx,vy,aT],...
 % エラーの計算
 E = [l1_final;l2_final;l3_final;l4_final] -...
      dphi_dx_transpose_final * [x_final;y_final;vx_final;vy_final];
-abs(E)
+fprintf('Loop: %d, Error: %.2f\n',iter,max(abs(E)));
 if max(abs(E)) < 1e-2
   disp('Simulation end');
     break;
@@ -178,8 +180,8 @@ dl2 = c_zero(2);
 dl3 = c_zero(3);
 dl4 = c_zero(4);
 
+iter = iter + 1;
 end
-
 
 
 function dc = riccati_ode2(t,c,At,Bt,Ct,St,t_all)
