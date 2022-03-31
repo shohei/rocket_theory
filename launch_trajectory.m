@@ -9,9 +9,9 @@ vrf = 0; %m/s
 
 vy0 = 1e-3; %m/s 垂直方向初速. ゼロにするとエラーになるので微小の値を入れた.
 vx0 = 465.1; %m/s 水平方向初速. 赤道上、真東への打ち上げ
-re = 6378.142e3; %m
-x0 = 0;
-y0 = re;
+re = 6378.142e3; %m 地球の半径
+x0 = re;
+y0 = 0;
 
 C = 4413; %m/s
 Isp = 450; %s 真空中比推力
@@ -27,16 +27,25 @@ tspan = linspace(0,tf,div_time);
 % シューティング法（Backward sweep）による繰り返し計算
 % λの初期値変数の初期値を仮定
 l1_0 = 1; l2_0 = 1; l3_0 = 1; l4_0 = 1;
-% λの初期値変数の定義
+% λの初期値変数の定義と初期化
 global l1i; global l2i; global l3i; global l4i; 
 l1i = l1_0; l2i = l2_0; l3i = l3_0; l4i = l4_0;
-% λの修正量δλの定義
+% λの修正量δλの定義と初期化
 global dl1; global dl2; global dl3; global dl4;
 dl1 = 0; dl2 = 0; dl3 = 0; dl4 = 0;
 
+figure(1);
+hold on;
+title('Error curve');
+xlabel('Iteration');
+ylabel('Error');
 
 iter = 0;
+Es = [];
+iters = [];
+
 %% メイン計算部
+tic;
 while true %無限ループ
 % λの初期値を仮定
 l1i = l1i + dl1; 
@@ -53,6 +62,8 @@ l2_ = xnext(:,6);
 l3_ = xnext(:,7);
 l4_ = xnext(:,8);
 aT_ = C./(tau_m-t_);
+r_ = sqrt(x_.^2+y_.^2);
+
 x_final = x_(end);
 y_final = y_(end);
 vx_final = vx_(end);
@@ -61,8 +72,8 @@ l1_final = l1_(end);
 l2_final = l2_(end);
 l3_final = l3_(end);
 l4_final = l4_(end);
-aT_final = C/(tau_m-t_(end));
-r_final = sqrt(x_final^2+y_final^2);
+aT_final = aT_(end);
+r_final = r_(end);
 
 syms x y vx vy l1 l2 l3 l4 aT;
 f1 = vx;
@@ -157,8 +168,15 @@ dphi_dx_transpose_final = eval(subs((dphi_dx)',[x,y,vx,vy,aT],...
 % エラーの計算
 E = [l1_final;l2_final;l3_final;l4_final] -...
      dphi_dx_transpose_final * [x_final;y_final;vx_final;vy_final];
-fprintf('Loop: %d, Error: %.2f\n',iter,max(abs(E)));
-if max(abs(E)) < 1e-2
+error = max(abs(E));
+fprintf('Loop: %d, Error: %.2f\n',iter,error);
+figure(1);
+iters(end+1) = iter;
+Es(end+1) = error;
+plot(iters,Es,'k');
+set(gca, 'YScale', 'log');
+drawnow();
+if error < 0.5
   disp('Simulation end');
     break;
 end
@@ -182,6 +200,42 @@ dl4 = c_zero(4);
 
 iter = iter + 1;
 end
+toc;
+
+figure(1);
+plot(x_/1000,y_/1000);
+title('赤道面上での軌跡');
+xlabel('水平位置 x [km]')
+ylabel('垂直距離 y [km]');
+
+figure(2);
+% 地表からの高度
+h_ = (r_ - re); %m
+plot(t_,h_/1000);
+title('高度');
+xlabel('Time [s]');
+ylabel('高度 h [km]');
+
+figure(3);
+% x軸から測った機軸姿勢角θ
+theta_ = atan2(vy_,vx_);
+plot(t_,theta_/pi*180);
+title('推力軸姿勢角θ');
+xlabel('Time [s]');
+ylabel('θ [deg]');
+
+% 飛行レンジ角Φ
+phi_ = atan2(x_,y_);
+% 局所水平面から測った機軸姿勢角θL
+theta_L_ = theta_ + phi_;
+figure(4);
+plot(t_,theta_L_/pi*180);
+title('局所水平面に対する機軸姿勢角θL');
+xlabel('Time [s]');
+ylabel('θL [deg]');
+
+big;
+grid;
 
 
 function dc = riccati_ode2(t,c,At,Bt,Ct,St,t_all)
