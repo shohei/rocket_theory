@@ -29,6 +29,7 @@ tspan = linspace(0,tf,div_time);
 l1_0 = 1; l2_0 = 1; l3_0 = 1; l4_0 = 1;
 % λの初期値変数の定義
 global l1i; global l2i; global l3i; global l4i; 
+l1i = l1_0; l2i = l2_0; l3i = l3_0; l4i = l4_0;
 % λの修正量δλの定義
 global dl1; global dl2; global dl3; global dl4; 
 dl1 = 0; dl2 = 0; dl3 = 0; dl4 = 0;
@@ -36,10 +37,10 @@ dl1 = 0; dl2 = 0; dl3 = 0; dl4 = 0;
 while true %無限ループ
 
 % λの初期値を仮定
-l1i = l1_0 + dl1; 
-l2i = l2_0 + dl2; 
-l3i = l3_0 + dl3; 
-l4i = l4_0 + dl4; 
+l1i = l1i + dl1; 
+l2i = l2i + dl2; 
+l3i = l3i + dl3; 
+l4i = l4i + dl4; 
 [t_,xnext] = ode23s(@adjoint_ode, tspan, [x0,y0,vx0,vy0,l1i,l2i,l3i,l4i]);
 x_ = xnext(:,1);
 y_ = xnext(:,2);
@@ -154,9 +155,10 @@ dphi_dx_transpose_final = eval(subs((dphi_dx)',[x,y,vx,vy,aT],...
 % エラーの計算
 E = [l1_final;l2_final;l3_final;l4_final] -...
      dphi_dx_transpose_final * [x_final;y_final;vx_final;vy_final];
-E
-if max(E) < 1e-2
-  break;
+abs(E)
+if max(abs(E)) < 1e-2
+  disp('Simulation end');
+    break;
 end
 
 %初回に一度make_ABCを実行してAt,Bt,Ctを作成しておく.
