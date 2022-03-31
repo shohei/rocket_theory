@@ -1,4 +1,6 @@
 clear; close all; clc;
+global count;
+count=0;
 
 global C; global tau_m; global mu;
 
@@ -25,7 +27,7 @@ l10 = 1; %todo
 l20= 1; %todo
 l30 = 1; %todo
 l40 = 1; %todo
-[t,xnext] = ode23s(@adjoint_ode, tspan, [x0,y0,vx0,vy0,l10,l20,l30,l40]);
+[t_,xnext] = ode23s(@adjoint_ode, tspan, [x0,y0,vx0,vy0,l10,l20,l30,l40]);
 x_ = xnext(:,1);
 y_ = xnext(:,2);
 vx_ = xnext(:,3);
@@ -34,6 +36,7 @@ l1_ = xnext(:,5);
 l2_ = xnext(:,6);
 l3_ = xnext(:,7);
 l4_ = xnext(:,8);
+aT_ = C./(tau_m-t_);
 x_final = x_(end);
 y_final = y_(end);
 vx_final = vx_(end);
@@ -42,7 +45,7 @@ l1_final = l1_(end);
 l2_final = l2_(end);
 l3_final = l3_(end);
 l4_final = l4_(end);
-aT_final = C/(tau_m-t(end));
+aT_final = C/(tau_m-t_(end));
 r_final = sqrt(x_final^2+y_final^2);
 E1 = r_final-rf;
 E2 = sqrt(vx_final^2+vy_final^2) - vf;
@@ -105,14 +108,10 @@ d2H_dx2 = [d2H_dxdx d2H_dxdy d2H_dxdvx d2H_dxdvy;
     d2H_dydx d2H_dydy d2H_dydvx d2H_dydvy;
     d2H_dvxdx d2H_dvxdy d2H_dvxdvx d2H_dvxdvy;
     d2H_dvydx d2H_dvydy d2H_dvydvx d2H_dvydvy];
-At = eval(subs(df_dx,[x y vx vy l1 l2 l3 l4 aT],...
-    [x_final,y_final,vx_final,vy_final,...
-    l1_final,l2_final,l3_final,l4_final,aT_final]));
+At = df_dx;
 Bt = 0;
-Ct = eval(subs(d2H_dx2,[x y vx vy l1 l2 l3 l4 aT],...
-    [x_final,y_final,vx_final,vy_final,...
-    l1_final,l2_final,l3_final,l4_final,aT_final]));
-r = sqrt(x^2+y^2);
+Ct = d2H_dx2;
+    r = sqrt(x^2+y^2);
 cos_theta = vx/sqrt(vx^2+vy^2);
 sin_theta = vy/sqrt(vx^2+vy^2);
 dtheta_dt = cos_theta^2*(-vy/vx^2*(aT*cos_theta-mu/r^3*x)+...
@@ -139,31 +138,32 @@ d2phi_dvydy = diff(diff(phi,vy),y);
 d2phi_dvydvx = diff(diff(phi,vy),vx);
 d2phi_dvydvy = diff(diff(phi,vy),vy);
 S = [d2phi_dxdx d2phi_dxdy d2phi_dxdvx d2phi_dxdvy;
-     d2phi_dydx d2phi_dydy d2phi_dydvx d2phi_dydvy;
-     d2phi_dvxdx d2phi_dvxdy d2phi_dvxdvx d2phi_dvxdvy;
-     d2phi_dvydx d2phi_dvydy d2phi_dvydvx d2phi_dvydvy];
+    d2phi_dydx d2phi_dydy d2phi_dydvx d2phi_dydvy;
+    d2phi_dvxdx d2phi_dvxdy d2phi_dvxdvx d2phi_dvxdvy;
+    d2phi_dvydx d2phi_dvydy d2phi_dvydvx d2phi_dvydvy];
 S_final = eval(subs(S,[x,y,vx,vy,aT],[x_final,y_final,vx_final,vy_final,aT_final]));
+S_final = reshape(S_final, [16,1]);
+[t,Snext] = ode23s(@(t,Sprev) riccati_ode1(...
+    t,Sprev,At,Bt,Ct,t_,x_,y_,vx_,vy_,l1_,l2_,l3_,l4_,aT_),...
+    flip(tspan),S_final);
 
-[t,S] = ode23s(@riccati_ode1,flip(tspan),S_final);
 
-function dS = riccati_ode1(t,S)
-global At; global Bt; global Ct;
-global xt; global yt; global vxt; global vyt;
-global l1t; global l2t; global l3t; global l4t; global aTt;
+function dS = riccati_ode1(t,S,At,Bt,Ct,t_,x_,y_,vx_,vy_,l1_,l2_,l3_,l4_,aT_)
 
-x_t = xt(t); y_t = yt(t); vx_t = vx(t); vy_t = vy(t);
-l1_t = l1t(t); l2_t = l2t(t); l3_t = l3t(t); l4_t = l4t(t);
-aT_t = aTt
-
-A_t = eval(subs(At,[x y vx vy l1 l2 l3 l4 aT],...
-    [x_t,y_t,vx_t,vy_t,l1_t,l2_t,l3_t,l4_t,aT_t]));
+t_idx = find(t_==t);
+x_t = x_(t_idx); y_t = y_(t_idx); vx_t = vx_(t_idx); vy_t = vy_(t_idx);
+l1_t = l1_(t_idx); l2_t = l2_(t_idx); l3_t = l3_(t_idx); l4_t = l4_(t_idx);
+aT_t = aT_(t_idx);
+syms x y vx vy aT l1 l2 l3 l4;
+A_t = eval(subs(At,[x y vx vy aT],[x_t,y_t,vx_t,vy_t,aT_t]));
 B_t = Bt;
 C_t = eval(subs(Ct,[x y vx vy l1 l2 l3 l4 aT],...
     [x_t,y_t,vx_t,vy_t,l1_t,l2_t,l3_t,l4_t,aT_t]));
-dS = -A_t^T*S-S*A_t-S*B_t*S+C_t;
+S = reshape(S,[4,4]);
+dS = -A_t'*S-S*A_t-S*B_t*S+C_t;
+dS = reshape(dS,[16,1]);
+
 end
-
-
 
 
 function dx = adjoint_ode(t,xprev)
