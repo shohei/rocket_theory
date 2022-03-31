@@ -10,8 +10,8 @@ vrf = 0; %m/s
 vy0 = 1e-3; %m/s 垂直方向初速. ゼロにするとエラーになるので微小の値を入れた.
 vx0 = 465.1; %m/s 水平方向初速. 赤道上、真東への打ち上げ
 re = 6378.142e3; %m 地球の半径
-x0 = re;
-y0 = 0;
+x0 = 0;
+y0 = re;
 
 C = 4413; %m/s
 Isp = 450; %s 真空中比推力
@@ -169,14 +169,15 @@ dphi_dx_transpose_final = eval(subs((dphi_dx)',[x,y,vx,vy,aT],...
 E = [l1_final;l2_final;l3_final;l4_final] -...
      dphi_dx_transpose_final * [x_final;y_final;vx_final;vy_final];
 error = max(abs(E));
-fprintf('Loop: %d, Error: %.2f\n',iter,error);
+rf_error = r_
+fprintf('Loop: %d, Error: %.3f\n',iter,error);
 figure(1);
 iters(end+1) = iter;
 Es(end+1) = error;
 plot(iters,Es,'k');
 set(gca, 'YScale', 'log');
 drawnow();
-if error < 0.5
+if error < 0.001
   disp('Simulation end');
     break;
 end
@@ -202,21 +203,21 @@ iter = iter + 1;
 end
 toc;
 
-figure(1);
+subplot(221);
 plot(x_/1000,y_/1000);
 title('赤道面上での軌跡');
 xlabel('水平位置 x [km]')
 ylabel('垂直距離 y [km]');
 
-figure(2);
+subplot(222);
 % 地表からの高度
-h = 
-plot(t_,r_/1000);
-title('地心距離');
+h_ = (r_ - re); %m
+plot(t_,h_/1000);
+title('高度');
 xlabel('Time [s]');
-ylabel('地心距離 r [km]');
+ylabel('高度 h [km]');
 
-figure(3);
+subplot(223);
 % x軸から測った機軸姿勢角θ
 theta_ = atan2(vy_,vx_);
 plot(t_,theta_/pi*180);
@@ -228,7 +229,7 @@ ylabel('θ [deg]');
 phi_ = atan2(x_,y_);
 % 局所水平面から測った機軸姿勢角θL
 theta_L_ = theta_ + phi_;
-figure(4);
+subplot(224);
 plot(t_,theta_L_/pi*180);
 title('局所水平面に対する機軸姿勢角θL');
 xlabel('Time [s]');
