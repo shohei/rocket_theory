@@ -205,6 +205,7 @@ end
 [t,Sprev] = ode23s(@(t,Snext) riccati_ode1(t,Snext,At,Bt,Ct,t_),flip(tspan),S_final);
 
 c_final = -E;
+
 [t,cprev] = ode23s(@(t,cnext) riccati_ode2(t,cnext,At,Bt,Ct,Sprev,t_),flip(tspan),c_final);
 % tは時系列的に逆順に入っているので、cprevの最後の要素がc(0)になる。
 c_zero = cprev(end,:);

@@ -1,0 +1,34 @@
+clear; close all; clc;
+
+% Input parameters
+D = 18e-2; %m
+L = 60e-2; %m
+
+% conic
+x = linspace(0,L,20);
+R = D/2;
+y = x*R/L;
+figure();
+plot(x,y,'k',x,-y,'k');
+
+% spherically blunted conic
+% rn = 10e-2; %m
+% x = L^2/R*sqrt(rn^2/(R^2+L^2));
+% y = x*R/L;
+% figure();
+% plot(x,y,'k',x,-y,'k');
+
+
+% Bi-conic
+mixing_rate = 0.2;
+L1 = mixing_rate*L;
+L2 = L-L1;
+
+
+
+
+
+
+
+
+big;
