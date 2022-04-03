@@ -21,7 +21,8 @@ aT_0 = 13.8; %m2/s. 1.4G
 mu = 3.986e14; %m3/s2
 
 tf = 274.1; %[s] エンジン燃焼時間
-div_time = 1000; %時間刻み
+global div_time;
+div_time = 100; %時間刻み
 tspan = linspace(0,tf,div_time);
 
 % シューティング法（Backward sweep）による繰り返し計算
@@ -186,21 +187,21 @@ Es(end+1) = error;
 plot(iters,Es,'k');
 set(gca, 'YScale', 'log');
 drawnow();
-if rf_error < 10e3  
-    disp('Simulation end');
-    break;
-end
+% if rf_error < 10e3  
+%     disp('Simulation end');
+%     break;
+% end
 if error < 0.001
   disp('Simulation end');
     break;
 end
 
 %初回に一度make_ABCを実行してAt,Bt,Ctを作成しておく.
-%  [At,Bt,Ct] = make_ABC(A_sym,B_sym,C_sym,t_,x_,y_,vx_,vy_,aT_,l1_,l2_,l3_,l4_);
-%  save('ABC.mat','At','Bt','Ct');
+[At,Bt,Ct] = make_ABC(A_sym,B_sym,C_sym,t_,x_,y_,vx_,vy_,aT_,l1_,l2_,l3_,l4_);
+% save('ABC.mat','At','Bt','Ct');
 
 %2回目以降はAt,Bt,Ctを呼び出して使う
-load('ABC','At','Bt','Ct');
+% load('ABC','At','Bt','Ct');
 [t,Sprev] = ode23s(@(t,Snext) riccati_ode1(t,Snext,At,Bt,Ct,t_),flip(tspan),S_final);
 
 c_final = -E;
@@ -265,6 +266,7 @@ end
 
 
 function [At, Bt, Ct] = make_ABC(A_sym,B_sym,C_sym,t_all,x_,y_,vx_,vy_,aT_,l1_,l2_,l3_,l4_)
+global div_time;
 tic;
 syms x y vx vy aT l1 l2 l3 l4;
 N = length(t_all);
@@ -272,7 +274,9 @@ At = zeros(4,4,N);
 Bt = zeros(4,4,N);
 Ct = zeros(4,4,N);
 for t_idx=1:length(t_all)
-    t_idx
+    if mod(t_idx,div_time/10)==0
+    fprintf('%d...',t_idx);
+    end
     x_t = x_(t_idx); y_t = y_(t_idx); vx_t = vx_(t_idx); 
     vy_t = vy_(t_idx); aT_t = aT_(t_idx); 
     l1_t = l1_(t_idx); l2_t = l2_(t_idx); l3_t = l3_(t_idx); 
